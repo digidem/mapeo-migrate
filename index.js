@@ -4,7 +4,7 @@ var Osmdb = require('osm-p2p')
 var Mapeo = require('@mapeo/core')
 var geojson = require('osm-p2p-geojson')
 var collect = require('collect-stream')
-var Config = require('@mapeo/config')
+var Settings = require('@mapeo/settings')
 
 var exportGeojson = require('./export-geojson')
 
@@ -14,22 +14,22 @@ var exportGeojson = require('./export-geojson')
  *  node bin/convert.js <user-data-path> <presets file> <output-folder>
  *
  *  Example:
- *  $ node bin/convert.js ~/.config/Mapeo /path/to/sinangoe-6.0.mapeosettings output/
+ *  $ node bin/convert.js ~/.settings/Mapeo /path/to/sinangoe-6.0.mapeosettings output/
  */
 
 module.exports = main
 function main (userDataPath, settingsFile, output) {
-  var config = new Config(userDataPath)
+  var settings = new Settings(userDataPath)
 
   var oldOsm = OldOsmdb(path.join(userDataPath), 'data')
   var mapeo = new Mapeo(Osmdb(output))
   // TODO: do we need to copy media here?
 
-  config.importSettings(settingsFile, function (err) {
+  settings.importSettings(settingsFile, function (err) {
     if (err) throw err
 
     // this makes me think mapeo-core should know about presets
-    var presets = config.getSettings('presets')
+    var presets = settings.getSettings('presets')
     convert(oldOsm, mapeo, presets)
   })
 }

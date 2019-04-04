@@ -12,8 +12,12 @@
     "data"
   ],
   "dependencies": {
+    "@mapeo/core": "^2.0.2",
+    "@mapeo/settings": "^1.0.0",
+    "collect-stream": "^1.2.1",
     "old-osm-p2p": "digidem/osm-p2p#50e4d86",
-    "osm-p2p": "^3.0.2"
+    "osm-p2p": "^3.0.2",
+    "osm-p2p-geojson": "^3.1.2"
   },
   "author": "Karissa McKelvey <krmckelv@gmail.com>",
   "license": "MIT"
