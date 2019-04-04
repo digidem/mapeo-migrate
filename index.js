@@ -1,22 +1,12 @@
-var hyperlog = require('hyperlog')
-var level = require('level')
 var path = require('path')
+var OldOsmdb = require('old-osm-p2p')
 var Osmdb = require('osm-p2p')
-var Mapeo = require('mapeo-core')
+var Mapeo = require('@mapeo/core')
 var geojson = require('osm-p2p-geojson')
 var collect = require('collect-stream')
 
-var exportGeojson = require('../src/lib/export-geojson')
-var Config = require('../src/lib/user-config')
-
-/*
- *
- * TODO:
- * - [x] user-config goes to @mapeo/config
- * - [ ] create @mapeo/migrate which requires both the old version of osm-p2p
- *   and new one
- * - [ ] move this script there
- */
+var exportGeojson = require('./export-geojson')
+var Config = require('@mapeo/config')
 
 /*
  * Converts mapeo data from hyperlog to kappa-core
@@ -31,23 +21,21 @@ module.exports = main
 function main (userDataPath, settingsFile, output) {
   var config = new Config(userDataPath)
 
-  var log = hyperlog(
-    level(path.join(userDataPath, 'data', 'log')),
-    {valueEncoding: 'json'}
-  )
+  var oldOsm = OldOsmdb(path.join(userDataPath), 'data')
   var mapeo = new Mapeo(Osmdb(output))
+  // TODO: do we need to copy media here?
 
   config.importSettings(settingsFile, function (err) {
     if (err) throw err
 
     // this makes me think mapeo-core should know about presets
     var presets = config.getSettings('presets')
-    convert(log, mapeo, presets)
+    convert(oldOsm, mapeo, presets)
   })
 }
 
-function convert (log, mapeo, presets) {
-  var rs = log.createReadStream()
+function convert (oldOsm, mapeo, presets) {
+  var rs = oldOsm.kv.createReadStream()
   rs.on('data', function (data) {
     var val = data.value.v
     if (val && val.type === 'observation') {
@@ -61,12 +49,12 @@ function convert (log, mapeo, presets) {
   })
   rs.on('end', function () {
     console.log('adding osm data')
-    var stream = exportGeojson(log, presets)
+    var stream = exportGeojson(oldOsm, presets)
     collect(stream, function (err, data) {
       if (err) throw err
       var fc = JSON.parse(data)
       console.log('Begin importing fc', fc)
-      var importer = geojson.importer(osm)
+      var importer = geojson.importer(oldOsm)
       importer.importFeatureCollection(fc)
       importer.on('import', function (index, length) {
         console.log(`imported ${index}/${length}`)
@@ -77,7 +65,9 @@ function convert (log, mapeo, presets) {
       importer.on('end', function () {
         console.log('done adding osm data')
       })
-      // TODO: copy media over? Create a syncfile?
+      // TODO: copy media over? Create a syncfile? move the kappa folder into
+      // the user data path? should we rename the data folder in mapeo-desktop
+      // and mobile so that it doesn't accidentally override the hyperlog data?
     })
   })
 }

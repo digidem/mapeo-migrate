@@ -11,6 +11,10 @@
     "migration",
     "data"
   ],
+  "dependencies": {
+    "old-osm-p2p": "digidem/osm-p2p#50e4d86",
+    "osm-p2p": "^3.0.2"
+  },
   "author": "Karissa McKelvey <krmckelv@gmail.com>",
   "license": "MIT"
 }
