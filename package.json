@@ -1,0 +1,16 @@
+{
+  "name": "@mapeo/migrate",
+  "version": "1.0.0",
+  "description": "Migration scripts for upgrading older mapeo databases to new ones",
+  "main": "convert.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "mapeo",
+    "migration",
+    "data"
+  ],
+  "author": "Karissa McKelvey <krmckelv@gmail.com>",
+  "license": "MIT"
+}
