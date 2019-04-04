@@ -4,9 +4,9 @@ var Osmdb = require('osm-p2p')
 var Mapeo = require('@mapeo/core')
 var geojson = require('osm-p2p-geojson')
 var collect = require('collect-stream')
+var Config = require('@mapeo/config')
 
 var exportGeojson = require('./export-geojson')
-var Config = require('@mapeo/config')
 
 /*
  * Converts mapeo data from hyperlog to kappa-core
