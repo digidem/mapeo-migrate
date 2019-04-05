@@ -12,7 +12,7 @@ var exportGeojson = require('./lib/export-geojson')
 /*
  * Converts mapeo data from hyperlog to kappa-core
  *
- *  $ migrate <syncfile> <presets file> <output-folder>
+ *  $ migrate <syncfile> <settings> <output-dir>
  *
  *  Example:
  *  $ migrate sinangoe.mapeodata sinangoe-6.0.mapeosettings output/
