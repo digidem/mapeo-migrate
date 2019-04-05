@@ -4,7 +4,8 @@
   "description": "Migration scripts for upgrading older mapeo databases to new ones",
   "main": "convert.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "do": "niv osm-p2p@2.0.0"
   },
   "keywords": [
     "mapeo",
@@ -15,10 +16,14 @@
     "@mapeo/core": "^2.0.2",
     "@mapeo/settings": "^1.0.0",
     "collect-stream": "^1.2.1",
-    "old-osm-p2p": "digidem/osm-p2p#50e4d86",
+    "lodash": "^4.17.11",
     "osm-p2p": "^3.0.2",
+    "osm-p2p-api": "^2.0.0",
     "osm-p2p-geojson": "^3.1.2"
   },
   "author": "Karissa McKelvey <krmckelv@gmail.com>",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "npm-install-version": "^6.0.2"
+  }
 }

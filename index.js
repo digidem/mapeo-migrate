@@ -1,12 +1,13 @@
 var path = require('path')
-var OldOsmdb = require('old-osm-p2p')
+var niv = require('npm-install-version')
+var OldOsmdb = niv.require('osm-p2p@2.0.0')
 var Osmdb = require('osm-p2p')
 var Mapeo = require('@mapeo/core')
 var geojson = require('osm-p2p-geojson')
 var collect = require('collect-stream')
 var Settings = require('@mapeo/settings')
 
-var exportGeojson = require('./export-geojson')
+var exportGeojson = require('./lib/export-geojson')
 
 /*
  * Converts mapeo data from hyperlog to kappa-core
@@ -21,7 +22,7 @@ module.exports = main
 function main (userDataPath, settingsFile, output) {
   var settings = new Settings(userDataPath)
 
-  var oldOsm = OldOsmdb(path.join(userDataPath), 'data')
+  var oldOsm = OldOsmdb(path.join(userDataPath, 'data'))
   var mapeo = new Mapeo(Osmdb(output))
   // TODO: do we need to copy media here?
 
@@ -37,9 +38,9 @@ function main (userDataPath, settingsFile, output) {
 function convert (oldOsm, mapeo, presets) {
   var rs = oldOsm.kv.createReadStream()
   rs.on('data', function (data) {
-    var val = data.value.v
+    var val = data.value && data.value.v
     if (val && val.type === 'observation') {
-      mapeo.observationCreate(transformObservationSchema1(val), function (err) {
+      mapeo.observationCreate(transformOldObservation(val), function (err) {
         if (err) throw err
       })
     }
@@ -55,15 +56,15 @@ function convert (oldOsm, mapeo, presets) {
       var fc = JSON.parse(data)
       console.log('Begin importing fc', fc)
       var importer = geojson.importer(oldOsm)
-      importer.importFeatureCollection(fc)
+      importer.importFeatureCollection(fc, function (err) {
+        if (err) throw err
+        console.log('done adding osm data')
+      })
       importer.on('import', function (index, length) {
         console.log(`imported ${index}/${length}`)
       })
       importer.on('error', function (err) {
         if (err) throw err
-      })
-      importer.on('end', function () {
-        console.log('done adding osm data')
       })
       // TODO: copy media over? Create a syncfile? move the kappa folder into
       // the user data path? should we rename the data folder in mapeo-desktop
@@ -93,6 +94,7 @@ var TOP_LEVEL_PROPS = USER_UPDATABLE_PROPS.concat([
   'type'
 ])
 
+// Props from old versions of mapeo-mobile that we can discard
 var SKIP_OLD_PROPS = [
   'created_at_timestamp',
   'link',
@@ -130,6 +132,43 @@ function transformObservationSchema1 (obs) {
     }
   })
   return newObs
+}
+
+// Transform an observation from ECA version of MM to the current format
+function transformObservationSchema2 (obs) {
+  var newObs = Object.assign({}, obs, {tags: {}})
+  Object.keys(obs.tags || {}).forEach(function (prop) {
+    if (prop === 'fields') {
+      newObs.fields = obs.tags.fields
+    } else if (prop === 'created') newObs.created_at = obs.tags.created
+    else newObs.tags[prop] = obs.tags[prop]
+  })
+  return newObs
+}
+
+// Get the schema version of the observation
+// Prior to schema 3 we had two beta testing schemas in the wild
+// which did not have a schemaVersion property
+function getSchemaVersion (obs) {
+  if (obs.schemaVersion) return obs.schemaVersion
+  if (typeof obs.device_id === 'string' &&
+    typeof obs.created === 'string' &&
+    typeof obs.tags === 'undefined') return 1
+  if (typeof obs.created_at === 'undefined' &&
+    typeof obs.tags !== 'undefined' &&
+    typeof obs.tags.created === 'string') return 2
+  return null
+}
+
+function transformOldObservation (obs) {
+  switch (getSchemaVersion(obs)) {
+    case 1:
+      return transformObservationSchema1(obs)
+    case 2:
+      return transformObservationSchema2(obs)
+    default:
+      return obs
+  }
 }
 
 main.apply(null, process.argv.slice(2))
