@@ -52,7 +52,8 @@ function convert (oldOsm, mapeo, presets) {
   rs.on('end', function () {
     console.log('adding osm data')
     var stream = exportGeojson(oldOsm, presets)
-    collect(stream, function (data) {
+    collect(stream, function (err, data) {
+      if (err) throw err
       var fc = JSON.parse(data)
       console.log('Begin importing fc', fc)
       var importer = geojson.importer(oldOsm)
