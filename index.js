@@ -4,6 +4,7 @@ var Mapeo = require('@mapeo/core')
 var geojson = require('osm-p2p-geojson')
 var Settings = require('@mapeo/settings')
 var collect = require('collect-stream')
+var level = require('level')
 
 var OsmKappa = require('./kappa.js')
 var exportGeojson = require('./lib/export-geojson')
@@ -11,29 +12,37 @@ var exportGeojson = require('./lib/export-geojson')
 /*
  * Converts mapeo data from hyperlog to kappa-core
  *
- *  node bin/convert.js <user-data-path> <presets file> <output-folder>
+ *  $ migrate <syncfile> <presets file> <output-folder>
  *
  *  Example:
- *  $ node bin/convert.js ~/.settings/Mapeo /path/to/sinangoe-6.0.mapeosettings output/
+ *  $ migrate sinangoe.mapeodata sinangoe-6.0.mapeosettings output/
  */
 
 module.exports = main
-function main (userDataPath, settingsFile, output) {
-  var settings = new Settings(userDataPath)
 
-  // TODO: get older version of osm-p2p
-  var oldOsm = OldOsmdb(path.join(userDataPath, 'data'))
+function unpackSyncfile (filename, userDataPath, cb) {
+}
 
-  var mapeo = new Mapeo(OsmKappa(output))
-  // TODO: do we need to copy media here?
+function main (osmSyncfile, settingsFile, output) {
+  var userDataPath = path.join(__dirname, 'old')
 
-  settings.importSettings(settingsFile, function (err) {
+  unpackSyncfile(osmSyncfile, userDataPath, function (err) {
     if (err) throw err
 
-    // this makes me think mapeo-core should know about presets
-    var presets = settings.getSettings('presets')
-    convert(oldOsm, mapeo, presets)
+    var settings = new Settings(userDataPath)
+
+    settings.importSettings(settingsFile, function (err) {
+      if (err) throw err
+
+      // this makes me think mapeo-core should know about presets
+      var presets = settings.getSettings('presets')
+
+      var mapeo = new Mapeo(OsmKappa(output))
+      var oldOsm = OldOsmdb(level(path.join(userDataPath, 'old', 'data')))
+      convert(oldOsm, mapeo, presets)
+    })
   })
+
 }
 
 function convert (oldOsm, mapeo, presets) {
