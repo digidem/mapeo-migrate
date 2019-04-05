@@ -1,11 +1,11 @@
 var path = require('path')
-var niv = require('npm-install-version')
-var OldOsmdb = niv.require('osm-p2p@2.0.0')
+var hyperlog = require('hyperlog')
 var Osmdb = require('osm-p2p')
 var Mapeo = require('@mapeo/core')
 var geojson = require('osm-p2p-geojson')
 var collect = require('collect-stream')
 var Settings = require('@mapeo/settings')
+var level = require('level')
 
 var exportGeojson = require('./lib/export-geojson')
 
@@ -22,7 +22,10 @@ module.exports = main
 function main (userDataPath, settingsFile, output) {
   var settings = new Settings(userDataPath)
 
-  var oldOsm = OldOsmdb(path.join(userDataPath, 'data'))
+  // TODO: get older version of osm-p2p
+  var log = hyperlog(level(path.join(userDataPath, 'data', 'log')))
+  var oldOsm =
+
   var mapeo = new Mapeo(Osmdb(output))
   // TODO: do we need to copy media here?
 
@@ -36,7 +39,7 @@ function main (userDataPath, settingsFile, output) {
 }
 
 function convert (oldOsm, mapeo, presets) {
-  var rs = oldOsm.kv.createReadStream()
+  var rs = oldOsm.createReadStream()
   rs.on('data', function (data) {
     var val = data.value && data.value.v
     if (val && val.type === 'observation') {

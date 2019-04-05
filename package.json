@@ -16,6 +16,7 @@
     "@mapeo/core": "^2.0.2",
     "@mapeo/settings": "^1.0.0",
     "collect-stream": "^1.2.1",
+    "hyperlog": "^4.12.1",
     "lodash": "^4.17.11",
     "osm-p2p": "^3.0.2",
     "osm-p2p-api": "^2.0.0",
@@ -23,7 +24,5 @@
   },
   "author": "Karissa McKelvey <krmckelv@gmail.com>",
   "license": "MIT",
-  "devDependencies": {
-    "npm-install-version": "^6.0.2"
-  }
+  "devDependencies": {}
 }
