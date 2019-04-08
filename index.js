@@ -6,7 +6,7 @@ var Settings = require('@mapeo/settings')
 var collect = require('collect-stream')
 var os = require('os')
 var Syncfile = require('osm-p2p-syncfile')
-var pump = require('pump')
+var mkdirp = require('mkdirp')
 
 var OsmKappa = require('./kappa.js')
 var exportGeojson = require('./lib/export-geojson')
@@ -22,16 +22,35 @@ var exportGeojson = require('./lib/export-geojson')
 
 module.exports = main
 
+function replicate (stream1, stream2, cb) {
+  // Taken from syncfile README. Q: Can we use pump?
+  stream1.on('end', done)
+  stream1.on('error', done)
+  stream2.on('end', done)
+  stream2.on('error', done)
+
+  stream1.pipe(stream2).pipe(stream1)
+
+  var pending = 2
+  var error
+  function done (err) {
+    error = err || error
+    if (!--pending) cb(err)
+  }
+}
+
 function unpackSyncfile (filename, oldPath, cb) {
   var oldOsm = OldOsmdb(path.join(oldPath, 'data'))
   var tmp = os.tmpdir()
   var syncfile = new Syncfile(filename, tmp)
-  syncfile.ready(function () {
-    var rs = syncfile.osm.log.replicate()
-    var ws = oldOsm.osm.replicate()
-    pump(rs, ws, rs, function (err) {
-      if (err) return cb(err)
-      cb(null, oldOsm)
+  oldOsm.ready(function () {
+    syncfile.ready(function () {
+      var rs = syncfile.osm.log.replicate()
+      var ws = oldOsm.log.replicate()
+      replicate(rs, ws, function (err) {
+        if (err) return cb(err)
+        return cb(null, oldOsm)
+      })
     })
   })
 }
@@ -50,15 +69,27 @@ function main (osmSyncfile, settingsFile, output) {
       // this makes me think mapeo-core should know about presets
       var presets = settings.getSettings('presets')
 
-      var mapeo = new Mapeo(OsmKappa(output))
-      convert(oldOsm, mapeo, presets)
+      oldOsm.close(function (err) {
+        if (err) throw err
+        console.log('closed')
+        var oldOsm = OldOsmdb(path.join(oldPath, 'data'))
+        mkdirp(output, function (err) {
+          if (err) throw err
+          var mapeo = new Mapeo(OsmKappa(output))
+          oldOsm.ready(function () {
+            convert(oldOsm, mapeo, presets)
+          })
+        })
+      })
     })
   })
 }
 
 function convert (oldOsm, mapeo, presets) {
+  console.log('converting')
   var rs = oldOsm.kv.createReadStream()
   rs.on('data', function (data) {
+    console.log('got', data)
     var val = data.value && data.value.v
     if (val && val.type === 'observation') {
       mapeo.observationCreate(transformOldObservation(val), function (err) {
