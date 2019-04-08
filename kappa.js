@@ -13,7 +13,7 @@ module.exports = function (opts) {
     core: kappa(dir, {valueEncoding: 'json'}),
     index: level(path.join(dir, 'index')),
     storage: function (name, cb) {
-      process.nextTick(cb, null, raf(path.join(dir, 'storage', name)))
+      return cb(null, raf(path.join(dir, 'storage', name)))
     }
   })
   return osm

@@ -58,25 +58,29 @@ function unpackSyncfile (filename, oldPath, cb) {
 function main (osmSyncfile, settingsFile, output) {
   var oldPath = path.join(__dirname, 'old')
 
+  console.log(`[ACTION] Unpacking syncfile ${osmSyncfile}`)
   unpackSyncfile(osmSyncfile, oldPath, function (err, oldOsm) {
     if (err) throw err
+    console.log(`Complete`)
 
+    console.log(`[ACTION] Importing settings ${settingsFile}`)
     var settings = new Settings(oldPath)
-
     settings.importSettings(settingsFile, function (err) {
       if (err) throw err
+      console.log(`Complete`)
 
       // this makes me think mapeo-core should know about presets
       var presets = settings.getSettings('presets')
 
       oldOsm.close(function (err) {
         if (err) throw err
-        console.log('closed')
         var oldOsm = OldOsmdb(path.join(oldPath, 'data'))
         mkdirp(output, function (err) {
           if (err) throw err
+          console.log(`[ACTION] Readying databases`)
           var mapeo = new Mapeo(OsmKappa(output))
           oldOsm.ready(function () {
+            console.log(`Complete`)
             convert(oldOsm, mapeo, presets)
           })
         })
@@ -86,34 +90,37 @@ function main (osmSyncfile, settingsFile, output) {
 }
 
 function convert (oldOsm, mapeo, presets) {
-  console.log('converting')
+  console.log(`[ACTION] Converting observations`)
   var rs = oldOsm.kv.createReadStream()
   rs.on('data', function (data) {
-    console.log('got', data)
     var val = data.value && data.value.v
     if (val && val.type === 'observation') {
+      console.log('Creating observation', val)
       mapeo.observationCreate(transformOldObservation(val), function (err) {
         if (err) throw err
       })
     }
   })
   rs.on('error', function (err) {
+    console.log(`[ERROR] In oldOsm.kv.createReadStream`)
     if (err) throw err
   })
   rs.on('end', function () {
-    console.log('adding osm data')
+    console.log(`Complete`)
     var stream = exportGeojson(oldOsm, presets)
+    console.log(`Exporting GeoJson`)
     collect(stream, function (err, data) {
       if (err) throw err
       var fc = JSON.parse(data)
-      console.log('Begin importing fc', fc)
+      console.log('[STATUS] Got feature collection', fc)
       var importer = geojson.importer(oldOsm)
+      console.log(`[ACTION] Importing Feature Collection`)
       importer.importFeatureCollection(fc, function (err) {
         if (err) throw err
-        console.log('done adding osm data')
+        console.log('Complete')
       })
       importer.on('import', function (index, length) {
-        console.log(`imported ${index}/${length}`)
+        console.log(`[STATUS] imported ${index}/${length}`)
       })
       importer.on('error', function (err) {
         if (err) throw err
