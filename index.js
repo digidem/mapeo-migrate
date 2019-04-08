@@ -4,7 +4,9 @@ var Mapeo = require('@mapeo/core')
 var geojson = require('osm-p2p-geojson')
 var Settings = require('@mapeo/settings')
 var collect = require('collect-stream')
-var level = require('level')
+var os = require('os')
+var Syncfile = require('osm-p2p-syncfile')
+var pump = require('pump')
 
 var OsmKappa = require('./kappa.js')
 var exportGeojson = require('./lib/export-geojson')
@@ -20,16 +22,27 @@ var exportGeojson = require('./lib/export-geojson')
 
 module.exports = main
 
-function unpackSyncfile (filename, userDataPath, cb) {
+function unpackSyncfile (filename, oldPath, cb) {
+  var oldOsm = OldOsmdb(path.join(oldPath, 'data'))
+  var tmp = os.tmpdir()
+  var syncfile = new Syncfile(filename, tmp)
+  syncfile.ready(function () {
+    var rs = syncfile.osm.log.replicate()
+    var ws = oldOsm.osm.replicate()
+    pump(rs, ws, rs, function (err) {
+      if (err) return cb(err)
+      cb(null, oldOsm)
+    })
+  })
 }
 
 function main (osmSyncfile, settingsFile, output) {
-  var userDataPath = path.join(__dirname, 'old')
+  var oldPath = path.join(__dirname, 'old')
 
-  unpackSyncfile(osmSyncfile, userDataPath, function (err) {
+  unpackSyncfile(osmSyncfile, oldPath, function (err, oldOsm) {
     if (err) throw err
 
-    var settings = new Settings(userDataPath)
+    var settings = new Settings(oldPath)
 
     settings.importSettings(settingsFile, function (err) {
       if (err) throw err
@@ -38,11 +51,9 @@ function main (osmSyncfile, settingsFile, output) {
       var presets = settings.getSettings('presets')
 
       var mapeo = new Mapeo(OsmKappa(output))
-      var oldOsm = OldOsmdb(level(path.join(userDataPath, 'old', 'data')))
       convert(oldOsm, mapeo, presets)
     })
   })
-
 }
 
 function convert (oldOsm, mapeo, presets) {
