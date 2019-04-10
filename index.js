@@ -7,6 +7,8 @@ var collect = require('collect-stream')
 var os = require('os')
 var Syncfile = require('osm-p2p-syncfile')
 var mkdirp = require('mkdirp')
+var createMediaReplicationStream = require('blob-store-replication-stream')
+var blob = require('safe-fs-blob-store')
 
 var OsmKappa = require('./kappa.js')
 var exportGeojson = require('./lib/export-geojson')
@@ -39,18 +41,26 @@ function replicate (stream1, stream2, cb) {
   }
 }
 
-function unpackSyncfile (filename, oldPath, cb) {
-  var oldOsm = OldOsmdb(path.join(oldPath, 'data'))
+function unpackSyncfile (filename, db, cb) {
   var tmp = os.tmpdir()
   var syncfile = new Syncfile(filename, tmp)
-  oldOsm.ready(function () {
+  db.osm.ready(function () {
     syncfile.ready(function () {
       var rs = syncfile.osm.log.replicate()
-      var ws = oldOsm.log.replicate()
-      replicate(rs, ws, function (err) {
-        if (err) return cb(err)
-        return cb(null, oldOsm)
-      })
+      var ws = db.osm.log.replicate()
+
+      var m1 = createMediaReplicationStream(syncfile.media)
+      var m2 = createMediaReplicationStream(db.media)
+      var pending = 2
+
+      var error
+      function fin (err) {
+        if (err) error = err
+        if (!--pending) cb(error)
+      }
+
+      replicate(rs, ws, fin)
+      replicate(m1, m2, fin)
     })
   })
 }
@@ -59,7 +69,12 @@ function main (osmSyncfile, settingsFile, output) {
   var oldPath = path.join(__dirname, 'old')
 
   console.log(`[ACTION] Unpacking syncfile ${osmSyncfile}`)
-  unpackSyncfile(osmSyncfile, oldPath, function (err, oldOsm) {
+  var db = {
+    osm: OldOsmdb(path.join(oldPath, 'data')),
+    // media is the same as before, so lets just unpack directly to output
+    media: blob(path.join(output, 'media'))
+  }
+  unpackSyncfile(osmSyncfile, db, function (err) {
     if (err) throw err
     console.log(`Complete`)
 
@@ -72,16 +87,17 @@ function main (osmSyncfile, settingsFile, output) {
       // this makes me think mapeo-core should know about presets
       var presets = settings.getSettings('presets')
 
-      oldOsm.close(function (err) {
+      db.osm.close(function (err) {
         if (err) throw err
-        var oldOsm = OldOsmdb(path.join(oldPath, 'data'))
+        // TODO: do we need to re-open?
+        db.osm = OldOsmdb(path.join(oldPath, 'data'))
         mkdirp(output, function (err) {
           if (err) throw err
           console.log(`[ACTION] Readying databases`)
           var mapeo = new Mapeo(OsmKappa(output))
-          oldOsm.ready(function () {
+          db.osm.ready(function () {
             console.log(`Complete`)
-            convert(oldOsm, mapeo, presets)
+            convertOsm(db.osm, mapeo, presets)
           })
         })
       })
@@ -89,7 +105,7 @@ function main (osmSyncfile, settingsFile, output) {
   })
 }
 
-function convert (oldOsm, mapeo, presets) {
+function convertOsm (oldOsm, mapeo, presets) {
   console.log(`[ACTION] Converting observations`)
   var rs = oldOsm.kv.createReadStream()
   rs.on('data', function (data) {
@@ -125,9 +141,6 @@ function convert (oldOsm, mapeo, presets) {
       importer.on('error', function (err) {
         if (err) throw err
       })
-      // TODO: copy media over? Create a syncfile? move the kappa folder into
-      // the user data path? should we rename the data folder in mapeo-desktop
-      // and mobile so that it doesn't accidentally override the hyperlog data?
     })
   })
 }
