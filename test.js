@@ -1,5 +1,6 @@
 var OldOsmdb = require('osm-p2p')
 var path = require('path')
+var fs = require('fs')
 var Mapeo = require('@mapeo/core')
 var collect = require('collect-stream')
 
@@ -8,7 +9,10 @@ var backwardsMap = swap(mapping)
 var OsmKappa = require('./kappa.js')
 
 module.exports = main
-var dupes = {}
+var allVersions = {}
+var allIds = {}
+var duplicateIds = {}
+var duplicateVersions = {}
 
 function main (oldPath, kappaPath) {
   var osm = OldOsmdb(path.join(oldPath, 'data'))
@@ -28,11 +32,22 @@ function main (oldPath, kappaPath) {
         console.log('new query:', newData.length)
         newData.forEach(function (d) {
           var oldVersion = backwardsMap[d.version]
-          var duplicate = dupes[d.version]
-          if (!duplicate) dupes[d.version] = [d]
+          var duplicate = allVersions[d.version]
+          if (!duplicate) allVersions[d.version] = [d]
           else {
             duplicate.push(d)
-            console.log('got dupes', dupes)
+            duplicateVersions[d.version] = duplicate
+            console.log('found duplicate versions', Object.keys(duplicateVersions).length)
+          }
+
+          duplicate = allIds[d.id]
+          if (!duplicate) allIds[d.id] = [d]
+          else {
+            duplicate.push(d)
+            duplicateIds[d.id] = duplicate
+            console.log('found duplicate ids', Object.keys(duplicateIds).length)
+            fs.writeFileSync('duplicates.json', JSON.stringify(duplicateIds, null, 2))
+            console.log('wrote duplicates.json')
           }
 
           osm.getByVersion(oldVersion, function (err, node) {
