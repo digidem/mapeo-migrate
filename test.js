@@ -13,7 +13,7 @@ function main (oldPath, kappaPath) {
   var osm = OldOsmdb(path.join(oldPath, 'data'))
   var mapeo = new Mapeo(OsmKappa(path.join(kappaPath, 'data')))
 
-  console.log(Object.keys(mapping).length)
+  console.log('Total versions in mapping.json:', Object.keys(mapping).length)
   collect(osm.log.createReadStream(), function (err, data) {
     if (err) throw err
     console.log('total hyperlog entries', data.length)
@@ -23,8 +23,8 @@ function main (oldPath, kappaPath) {
       if (err) throw err
       mapeo.osm.query([-Infinity, -Infinity, Infinity, Infinity], function (err, newData) {
         if (err) throw err
-        console.log('old:', oldData.length)
-        console.log('new:', newData.length)
+        console.log('old query:', oldData.length)
+        console.log('new query:', newData.length)
         newData.forEach(function (d) {
           var oldVersion = backwardsMap[d.version]
           osm.getByVersion(oldVersion, function (err, node) {
