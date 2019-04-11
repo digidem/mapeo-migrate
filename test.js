@@ -8,6 +8,7 @@ var backwardsMap = swap(mapping)
 var OsmKappa = require('./kappa.js')
 
 module.exports = main
+var dupes = {}
 
 function main (oldPath, kappaPath) {
   var osm = OldOsmdb(path.join(oldPath, 'data'))
@@ -27,6 +28,13 @@ function main (oldPath, kappaPath) {
         console.log('new query:', newData.length)
         newData.forEach(function (d) {
           var oldVersion = backwardsMap[d.version]
+          var duplicate = dupes[d.version]
+          if (!duplicate) dupes[d.version] = [d]
+          else {
+            duplicate.push(d)
+            console.log('got dupes', dupes)
+          }
+
           osm.getByVersion(oldVersion, function (err, node) {
             if (err) throw err
             if (!node) throw new Error('Node not found:', d)
