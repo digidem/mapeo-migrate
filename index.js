@@ -33,6 +33,8 @@ function unpackSyncfile (filename, dir, cb) {
   })
 }
 
+var numDeleted = 0
+
 function main (osmSyncfile, output) {
   var oldPath = path.join(__dirname, 'old')
 
@@ -59,9 +61,6 @@ function main (osmSyncfile, output) {
   })
 }
 
-var testing = '0783992b19cf572120d81885a2d12a717dc7f6afc41bb93ccd443b4f2b2a3f23'
-var testingId = '7040888349604762768'
-
 function convertOsm (oldOsm, mapeo) {
   console.log(`[ACTION] Converting open street map`)
   var map = {}
@@ -69,7 +68,6 @@ function convertOsm (oldOsm, mapeo) {
   var convertStream = through.obj(function (data, enc, next) {
     var oldVersion = data.key
     var id = data.value.k
-    if (id === testingId) console.log('read testing value from old osm', data)
     var element = data.value && data.value.v
     var links = data.links ? data.links.map((old) => map[old]) : []
 
@@ -81,19 +79,17 @@ function convertOsm (oldOsm, mapeo) {
     if (!element && data.value.d) {
       var value = Object.assign(data.value, {links})
       // console.log('deleting', value)
-      if (value.links[0] === undefined) {
-        console.log('got value.links undefined', data)
-      }
       return mapeo.osm.batch([{type: 'del', id, value}], function (err, node) {
         if (err) throw err
         // console.log('Modified', node, map)
+        numDeleted += 1
+        // console.log('numDeleted', numDeleted)
         updateVersion(node)
         next()
       })
     }
 
     mapeo.osm.get(id, function (err, node) {
-      if (id === testingId) console.log('got this from kappa-osm', err, node)
       if (err) throw err
       var value = Object.assign(element, {links})
 
@@ -105,7 +101,6 @@ function convertOsm (oldOsm, mapeo) {
         next()
       }
 
-      if (id === testingId) console.log('creating', id, value)
       if (value.type === 'observation') {
         var obs = schema.transformOldObservation(value)
         obs.id = id
@@ -122,6 +117,8 @@ function convertOsm (oldOsm, mapeo) {
       console.log(`[ERROR] In oldOsm.log.createReadStream`)
       throw err
     }
+    console.log('Writing mapping.json')
+    fs.writeFileSync('mapping.json', JSON.stringify(map, null, 2))
     console.log(`Complete`)
   })
 }
