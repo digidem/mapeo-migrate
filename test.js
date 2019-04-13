@@ -30,6 +30,11 @@ function main (oldPath, kappaPath) {
         if (err) throw err
         console.log('old query:', oldData.length)
         console.log('new query:', newData.length)
+
+        var d = diff(oldData, newData)
+        fs.writeFileSync('diff.json', JSON.stringify(d, null, 2))
+        console.log('wrote diff to diff.json')
+
         newData.forEach(function (d) {
           var oldVersion = backwardsMap[d.version]
           var duplicate = allVersions[d.version]
@@ -66,6 +71,41 @@ function swap (json) {
     ret[json[key]] = key
   }
   return ret
+}
+
+function diff (prev, next) {
+  var res = {
+    prevOnly: [],
+    nextOnly: []
+  }
+
+  var prevIds = {}
+  for (var i=0; i < prev.length; i++) {
+    var node = prev[i]
+    if (prevIds[node.id]) prevIds[node.id].push(node)
+    else prevIds[node.id] = [node]
+  }
+
+  var nextIds = {}
+  for (var i=0; i < next.length; i++) {
+    var node = next[i]
+    if (nextIds[node.id]) nextIds[node.id].push(node)
+    else nextIds[node.id] = [node]
+
+    if (!prevIds[node.id]) {
+      res.nextOnly.push(node)
+    }
+  }
+
+  for (var i=0; i < prev.length; i++) {
+    var node = prev[i]
+
+    if (!nextIds[node.id]) {
+      res.prevOnly.push(node)
+    }
+  }
+
+  return res
 }
 
 main.apply(null, process.argv.slice(2))
