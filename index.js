@@ -67,7 +67,7 @@ function convertOsm (oldOsm, mapeo) {
   var rs = oldOsm.log.createReadStream()
   var convertStream = through.obj(function (data, enc, next) {
     var oldVersion = data.key
-    var id = data.value.k
+    var id = data.value.k || data.value.d
     var element = data.value && data.value.v
     var links = data.links ? data.links.map((old) => map[old]) : []
 
@@ -77,7 +77,10 @@ function convertOsm (oldOsm, mapeo) {
     }
 
     if (!element && data.value.d) {
-      var value = Object.assign(data.value, {links})
+      var value = {
+        deleted: true,
+        links: links
+      }
       // console.log('deleting', value)
       return mapeo.osm.batch([{type: 'del', id, value}], function (err, node) {
         if (err) throw err
