@@ -4,7 +4,8 @@
   "description": "Migration scripts for upgrading older mapeo databases to new ones",
   "main": "convert.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "migrate": "node index.js",  
+    "test": "node test.js old/"
   },
   "keywords": [
     "mapeo",
