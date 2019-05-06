@@ -56,9 +56,52 @@ function main (osmSyncfile, output) {
       console.log(`Complete`)
       fs.renameSync(path.join(oldPath, 'original'), path.join(media, 'original'))
       fs.renameSync(path.join(oldPath, 'thumbnail'), path.join(media, 'thumbnail'))
-      convertOsm(osm, mapeo)
+
+      var pending = 2
+      upgradeMediaPaths(path.join(media, 'original'), fin)
+      upgradeMediaPaths(path.join(media, 'thumbnail'), fin)
+      function fin (err) {
+        if (err) throw err
+        if (!--pending) convertOsm(osm, mapeo)
+      }
     })
   })
+}
+
+// Updates all media files with path 'dir/foo.jpg' to be prefixed for
+// safe-fs-blob-store: 'dir/fo/foo.jpg'
+function upgradeMediaPaths (dir, cb) {
+  var processed = 0
+
+  fs.readdir(dir, function (err, files) {
+    if (err) return cb(err)
+    var pending = files.length + 1
+    files.forEach(function (name) {
+      var subdir = name.substring(0,2)
+      fs.stat(path.join(dir, name), function (err, stat) {
+        if (stat.isDirectory()) {
+          if (!--pending) cb()
+          return
+        }
+        mkdirp(path.join(dir, subdir), function () {
+          fs.rename(path.join(dir, name), path.join(dir, subdir, name), function (err) {
+            if (err) return cb(err)
+            processed++
+            if (!--pending) cb()
+          })
+        })
+      })
+    })
+    if (!--pending) cb()
+  })
+
+  function fin (err) {
+    if (err) cb(err)
+    else {
+      console.log('Fixed paths on', processed, 'media files.')
+      cb()
+    }
+  }
 }
 
 function convertOsm (oldOsm, mapeo) {
@@ -66,7 +109,6 @@ function convertOsm (oldOsm, mapeo) {
   var map = {}
   var rs = oldOsm.log.createReadStream()
   var convertStream = through.obj(function (data, enc, next) {
-    process.stdout.write('.')
     var oldVersion = data.key
     var id = data.value.k || data.value.d
     var element = data.value && data.value.v
