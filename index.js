@@ -66,6 +66,7 @@ function convertOsm (oldOsm, mapeo) {
   var map = {}
   var rs = oldOsm.log.createReadStream()
   var convertStream = through.obj(function (data, enc, next) {
+    process.stdout.write('.')
     var oldVersion = data.key
     var id = data.value.k || data.value.d
     var element = data.value && data.value.v
@@ -116,6 +117,7 @@ function convertOsm (oldOsm, mapeo) {
     })
   })
   pump(rs, convertStream, function (err) {
+    console.log()
     if (err) {
       console.log(`[ERROR] In oldOsm.log.createReadStream`)
       throw err
