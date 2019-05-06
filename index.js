@@ -7,6 +7,7 @@ var pump = require('pump')
 var gunzip = require('gunzip-maybe')
 var tar = require('tar-fs')
 var mkdirp = require('mkdirp')
+var sharp = require('sharp')
 
 var OsmKappa = require('./kappa')
 var schema = require('./schema')
@@ -44,6 +45,7 @@ function main (osmSyncfile, output) {
   mkdirp.sync(oldPath)
   mkdirp.sync(datadir)
   mkdirp.sync(media)
+  mkdirp.sync(path.join(media, 'preview'))
 
   console.log(`[ACTION] Unpacking syncfile ${osmSyncfile}`)
   unpackSyncfile(osmSyncfile, oldPath, function (err) {
@@ -57,9 +59,13 @@ function main (osmSyncfile, output) {
       fs.renameSync(path.join(oldPath, 'original'), path.join(media, 'original'))
       fs.renameSync(path.join(oldPath, 'thumbnail'), path.join(media, 'thumbnail'))
 
-      var pending = 2
-      upgradeMediaPaths(path.join(media, 'original'), fin)
-      upgradeMediaPaths(path.join(media, 'thumbnail'), fin)
+      var pending = 3
+      generatePreviewMedia(path.join(media, 'original'), function (err) {
+        if (err) throw err
+        upgradeMediaPaths(path.join(media, 'original'), fin)
+        upgradeMediaPaths(path.join(media, 'preview'), fin)
+        upgradeMediaPaths(path.join(media, 'thumbnail'), fin)
+      })
       function fin (err) {
         if (err) throw err
         if (!--pending) convertOsm(osm, mapeo)
@@ -68,31 +74,68 @@ function main (osmSyncfile, output) {
   })
 }
 
+// Opens all path.join(dir, 'original') media files and generates preview-sized
+// media for them in path.join(dir, 'preview').
+function generatePreviewMedia (dir, cb) {
+  var processed = 0
+
+  fs.readdir(dir, function (err, files) {
+    if (err) return fin(err)
+    ;(function next (n) {
+      if (n >= files.length) return fin()
+      var name = files[n]
+      console.log('starting', name)
+      fs.stat(path.join(dir, name), function (err, stat) {
+        if (stat.isDirectory()) return next(n+1)
+        var outname = path.join(path.join(dir, '..', 'preview', name))
+        console.log('resizing', name)
+        sharp(path.join(dir, name))
+          .resize({ width: 2000, height: 2000, fit: 'inside' })
+          .jpeg({quality: 50})
+          .toFile(outname, function (err) {
+            console.log('resized')
+            if (err) fin(err)
+            else next(n+1)
+          })
+      })
+    })(0)
+  })
+
+  function fin (err) {
+    console.log('done')
+    if (err) cb(err)
+    else {
+      console.log('Fixed paths on', processed, 'media files.')
+      cb()
+    }
+  }
+}
+
 // Updates all media files with path 'dir/foo.jpg' to be prefixed for
 // safe-fs-blob-store: 'dir/fo/foo.jpg'
 function upgradeMediaPaths (dir, cb) {
   var processed = 0
 
   fs.readdir(dir, function (err, files) {
-    if (err) return cb(err)
+    if (err) return fin(err)
     var pending = files.length + 1
     files.forEach(function (name) {
       var subdir = name.substring(0,2)
       fs.stat(path.join(dir, name), function (err, stat) {
         if (stat.isDirectory()) {
-          if (!--pending) cb()
+          if (!--pending) fin()
           return
         }
         mkdirp(path.join(dir, subdir), function () {
           fs.rename(path.join(dir, name), path.join(dir, subdir, name), function (err) {
-            if (err) return cb(err)
+            if (err) return fin(err)
             processed++
-            if (!--pending) cb()
+            if (!--pending) fin()
           })
         })
       })
     })
-    if (!--pending) cb()
+    if (!--pending) fin()
   })
 
   function fin (err) {
