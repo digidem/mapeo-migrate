@@ -94,6 +94,7 @@ function generatePreviewMedia (dir, cb) {
           .jpeg({quality: 50})
           .toFile(outname, function (err) {
             console.log('resized')
+            processed++
             if (err) fin(err)
             else next(n+1)
           })
@@ -105,7 +106,7 @@ function generatePreviewMedia (dir, cb) {
     console.log('done')
     if (err) cb(err)
     else {
-      console.log('Fixed paths on', processed, 'media files.')
+      console.log('Resized', processed, 'original -> preview files.')
       cb()
     }
   }
