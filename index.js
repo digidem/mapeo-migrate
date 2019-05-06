@@ -34,8 +34,6 @@ function unpackSyncfile (filename, dir, cb) {
   })
 }
 
-var numDeleted = 0
-
 function main (osmSyncfile, output) {
   var oldPath = path.join(__dirname, 'old')
 
@@ -86,7 +84,8 @@ function generatePreviewMedia (dir, cb) {
       var name = files[n]
       console.log('starting', name)
       fs.stat(path.join(dir, name), function (err, stat) {
-        if (stat.isDirectory()) return next(n+1)
+        if (err) return fin(err)
+        if (stat.isDirectory()) return next(n + 1)
         var outname = path.join(path.join(dir, '..', 'preview', name))
         console.log('resizing', name)
         sharp(path.join(dir, name))
@@ -96,7 +95,7 @@ function generatePreviewMedia (dir, cb) {
             console.log('resized')
             processed++
             if (err) fin(err)
-            else next(n+1)
+            else next(n + 1)
           })
       })
     })(0)
@@ -121,8 +120,9 @@ function upgradeMediaPaths (dir, cb) {
     if (err) return fin(err)
     var pending = files.length + 1
     files.forEach(function (name) {
-      var subdir = name.substring(0,2)
+      var subdir = name.substring(0, 2)
       fs.stat(path.join(dir, name), function (err, stat) {
+        if (err) return fin(err)
         if (stat.isDirectory()) {
           if (!--pending) fin()
           return
@@ -168,12 +168,8 @@ function convertOsm (oldOsm, mapeo) {
         deleted: true,
         links: links
       }
-      // console.log('deleting', value)
       return mapeo.osm.batch([{type: 'del', id, value}], function (err, node) {
         if (err) throw err
-        // console.log('Modified', node, map)
-        numDeleted += 1
-        // console.log('numDeleted', numDeleted)
         updateVersion(node)
         next()
       })
