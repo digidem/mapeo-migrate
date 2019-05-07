@@ -89,8 +89,8 @@ function generatePreviewMedia (dir, cb) {
         var outname = path.join(path.join(dir, '..', 'preview', name))
         console.log('resizing', name)
         sharp(path.join(dir, name))
-          .resize({ width: 2000, height: 2000, fit: 'inside' })
-          .jpeg({quality: 50})
+          .resize({ width: 1200, height: 1200, fit: 'inside' })
+          .jpeg({quality: 30})
           .toFile(outname, function (err) {
             console.log('resized')
             processed++
