@@ -1,3 +1,17 @@
+/*
+ * Converts mapeo data from hyperlog to kappa-core
+ *
+ *  $ migrate <syncfile> <output-dir>
+ *
+ *  Example:
+ *  $ migrate sinangoe.mapeodata output/
+ */
+
+if (process.argv.length !== 4) {
+  console.log('USAGE: node index.js SYNCFILE OUTDIR')
+  process.exit(0)
+}
+
 var path = require('path')
 var through = require('through2')
 var OldOsmdb = require('osm-p2p')
@@ -11,15 +25,6 @@ var sharp = require('sharp')
 
 var OsmKappa = require('./kappa')
 var schema = require('./schema')
-
-/*
- * Converts mapeo data from hyperlog to kappa-core
- *
- *  $ migrate <syncfile> <output-dir>
- *
- *  Example:
- *  $ migrate sinangoe.mapeodata output/
- */
 
 module.exports = main
 
