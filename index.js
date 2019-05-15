@@ -188,8 +188,10 @@ function convertOsm (oldOsm, mapeo) {
       }
 
       if (value.type === 'observation') {
+        var ca = value.created_at_timestamp
         var obs = schema.transformOldObservation(value)
         obs.id = id
+        if (ca) obs.created_at = new Date(ca).toISOString()
         // console.log('Creating observation', obs)
         mapeo.observationCreate(obs, done)
       } else {
