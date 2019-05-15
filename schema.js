@@ -24,7 +24,8 @@ var SKIP_OLD_PROPS = [
   'created_at_timestamp',
   'link',
   'device_id',
-  'observedBy'
+  'observedBy',
+  'links'
 ]
 
 // Transform an observation from Sinangoe version of MM to the current format
