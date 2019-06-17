@@ -200,6 +200,7 @@ function convertOsm (oldOsm, mapeo) {
         obs.id = id
         if (ca) obs.created_at = new Date(ca).toISOString()
         obs.schemaVersion = 3
+        delete obs.fields
         // console.log('Creating observation', obs)
         mapeo.osm.put(obs.id, obs, done)
       } else {
