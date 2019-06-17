@@ -202,6 +202,10 @@ function convertOsm (oldOsm, mapeo) {
         obs.schemaVersion = 3
         delete obs.fields
         Object.keys(obs.tags).forEach(key => {
+          if (key === 'building-type' || key === 'name') {
+            delete obs.tags[key]
+            return
+          }
           if (!obs.tags[key]) return
           obs.tags[key] = obs.tags[key].trim()
         })
