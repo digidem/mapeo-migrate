@@ -200,7 +200,7 @@ function convertOsm (oldOsm, mapeo) {
         obs.id = id
         if (ca) obs.created_at = new Date(ca).toISOString()
         // console.log('Creating observation', obs)
-        mapeo.observationCreate(obs, done)
+        mapeo.osm.put(obs.id, obs, done)
       } else {
         // console.log('Creating', id, value)
         mapeo.osm.batch([{type: 'put', id, value}], done)
