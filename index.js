@@ -201,6 +201,10 @@ function convertOsm (oldOsm, mapeo) {
         if (ca) obs.created_at = new Date(ca).toISOString()
         obs.schemaVersion = 3
         delete obs.fields
+        Object.keys(obs.tags).forEach(key => {
+          if (!obs.tags[key]) return
+          obs.tags[key] = obs.tags[key].trim()
+        })
         // console.log('Creating observation', obs)
         const date = new Date(obs.created_at)
         if (date < new Date(2017, 0)) return next()
