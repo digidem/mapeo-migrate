@@ -22,6 +22,7 @@ var gunzip = require('gunzip-maybe')
 var tar = require('tar-fs')
 var mkdirp = require('mkdirp')
 var sharp = require('sharp')
+var glob = require('glob')
 
 var OsmKappa = require('./kappa')
 var schema = require('./schema')
@@ -82,7 +83,7 @@ function main (osmSyncfile, output) {
 function generatePreviewMedia (dir, cb) {
   var processed = 0
 
-  fs.readdir(dir, function (err, files) {
+  glob('**/*.jpg', { cwd: dir }, function (err, files) {
     if (err) return fin(err)
     ;(function next (n) {
       if (n >= files.length) return fin()
@@ -92,6 +93,7 @@ function generatePreviewMedia (dir, cb) {
         if (err) return fin(err)
         if (stat.isDirectory()) return next(n + 1)
         var outname = path.join(path.join(dir, '..', 'preview', name))
+        mkdirp.sync(path.dirname(outname))
         console.log('resizing', name)
         sharp(path.join(dir, name))
           .resize({ width: 1200, height: 1200, fit: 'inside' })
