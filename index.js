@@ -22,6 +22,7 @@ var gunzip = require('gunzip-maybe')
 var tar = require('tar-fs')
 var mkdirp = require('mkdirp')
 var sharp = require('sharp')
+var rimraf = require('rimraf')
 
 var OsmKappa = require('./kappa')
 var schema = require('./schema')
@@ -45,6 +46,7 @@ function main (osmSyncfile, output) {
   var datadir = path.join(output, 'data')
   var media = path.join(output, 'media')
 
+  rimraf.sync(oldPath)
   mkdirp.sync(oldPath)
   mkdirp.sync(datadir)
   mkdirp.sync(media)

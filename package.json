@@ -30,6 +30,7 @@
     "osm-p2p-syncfile": "^3.0.0",
     "pump": "^3.0.0",
     "random-access-file": "^2.1.0",
+    "rimraf": "^2.6.3",
     "safe-fs-blob-store": "^1.0.3",
     "sharp": "^0.22.1",
     "tape": "^4.10.1",
